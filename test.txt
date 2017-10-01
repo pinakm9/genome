@@ -4,3 +4,9 @@ Number of lines in ./../data/chrX_map.txt is 151100561
 Number of lines in ./../data/reads is 3066720
 
 Number of lines in ./../data/reads is 3066720
+
+Number of lines in ./../data/chrX_map.txt is 151100561
+
+Number of lines in ./../data/chrX_map.txt is 151100561
+
+Number of lines in ./../data/chrX_map.txt is 151100561

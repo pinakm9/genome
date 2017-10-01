@@ -34,10 +34,7 @@ def fread(map_file = p2_map, ref_file = p2_ref):
 
 init()
 
-#count_char()
-#prep_B_rank()
-ref_file, map_file =  open(p2_ref, 'r'), open(p2_map, 'r')
-print(next_band([1000,4000], 'G', map_file, ref_file))
-ref_file.close()
-map_file.close()
-#fread()
+
+#count_lines(p2_map)
+search('TATAAAAGCAGACTGCCTGAGCCAGCAGTGGCAACCCAATGGGGTCCCTTTCCATACTGTGGAA')
+end()

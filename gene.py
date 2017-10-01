@@ -13,6 +13,9 @@ offset = len('>chrX\n')                       # Index where reference sequence s
 ref_len = 0									  # Length of the reference sequence (to be computed by init)
 col1 = {}									  # First column of BWT (to be computed by init)
 ranks = {}									  # Dictionary that stores rank arrays (to be computed by init)
+map_file = open(p2_map, 'r')				  # File object corresponding to suffix array
+ref_file = open(p2_ref, 'r')				  # File object corresponding to reference sequence
+arr = []									  # Suffix array
 
 # Returns rank filename given a chracter
 def rank_file(char):
@@ -79,7 +82,7 @@ def load_rank(chars = char_set[:-2]):
 # Loads first column of BWT matrix into RAM
 def load_1st_col():
 	d = file_2_dict(p2_1st_col) 
-	rl = sum(d[char] for char in char_set[:-2])
+	rl = sum(d[char] for char in char_set[:-2]) + 1 # Adding 1 to account for '$'
 	return [d, rl]
 
 @timer # Creates various objects required for the program to function
@@ -94,14 +97,23 @@ def init():
 		if not os.path.isfile(rank_file(char)):
 			prep_B_rank()
 			break
-	global col1, ref_len, ranks 
+	global col1, ref_len, ranks, arr 
 	col1, ref_len = load_1st_col()
 	ranks = load_rank()
+	arr = [None]*(ref_len)
+	for i, line in enumerate(map_file):
+		arr[i] = int(line)
+
+
+# Prepares closure of the program
+def end():
+	map_file.close()
+	ref_file.close()
 
 #@timer # Computes B-rank
-def rank(index, bwt_file = p2_last_col):
-	miles, correction = index/milestone_gap, index/line_len
-	position = index + correction # Correction for ignoring newlines
+def rank(i, bwt_file = p2_last_col):
+	miles, correction = i/milestone_gap, i/line_len
+	position = i + correction # Correction for ignoring newlines
 	with open(p2_last_col, 'r') as bwt:
 		bwt.seek(position)
 		char = bwt.read(1)
@@ -129,10 +141,10 @@ def index2(char, i):
 	return index(char, rank(i))
 
 @timer # Computes band for string char+x given the band for string x
-def next_band(band, char, map_file, ref_file):
+def next_band(band, char):
 	start, end = -1, -1
-	for j,i in enumerate(islice(map_file, *band)):
-		i = int(i.rstrip())
+	for j,i in enumerate(arr[band[0]:band[1]]):
+		i = int(i)
 		ref_file.seek(offset + i + i/line_len -1)
 		#print(ch,c)
 		if ref_file.read(1) == char:
@@ -140,7 +152,27 @@ def next_band(band, char, map_file, ref_file):
 				start = j
 			end = j
 	return list(map(lambda x: index2(char, x+band[0]), [start, end]))
-	"""for i in islice(map_file, *nb):
-		i = int(i.rstrip())
-		ref_file.seek(offset+i+i/line_len)
-		print(ref_file.read(1))"""
+
+@timer # Returns a chunk of reference sequence from starting index
+def get_chunk(start, length):
+	ref_file.seek(offset + start + start/line_len)
+	end =  start + length
+	l = length + end/line_len - start/line_len
+	return ref_file.read(l).replace('\n', '')
+
+@timer # Binary serach in suffix array
+def search(pattern):
+	m, l, p, found =  ref_len/2, len(pattern), 2, False
+	while p < ref_len:
+		p = 2*p
+		s = arr[m]	
+		text = get_chunk(s, l)
+		if pattern == text:
+			found = True
+			break 
+		elif pattern > text:
+			m = m + ref_len/p
+		else:
+			m = m - ref_len/p
+	return s if found is True else -1
+
