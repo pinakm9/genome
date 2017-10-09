@@ -1,21 +1,21 @@
 # Contains various search functions
 
 from utility import *
-from rank import rank, index
+from rank import *
 
-red_exons =[[149249757, 149249868],\
-			[149256127, 149256423],\
-			[149258412, 149258580],\
-			[149260048, 149260213],\
-			[149261768, 149262007],\
-			[149264290, 149264400]]
+exons = {'red':[[149249757, 149249868],\
+				[149256127, 149256423],\
+				[149258412, 149258580],\
+				[149260048, 149260213],\
+				[149261768, 149262007],\
+				[149264290, 149264400]],\
 
-green_exons=[[149288166, 149288277],\
-			[149293258, 149293554],\
-			[149295542, 149295710],\
-			[149297178, 149297343],\
-			[149298898, 149299137],\
-			[149301420, 149301530]]
+		'green':[[149288166, 149288277],\
+				[149293258, 149293554],\
+				[149295542, 149295710],\
+				[149297178, 149297343],\
+				[149298898, 149299137],\
+				[149301420, 149301530]]}
 
 # Returns band in the 1st column given a character 
 def first_band(char):
@@ -77,23 +77,17 @@ def searchN(pattern, col1, bwt, ranks, bands, N):
 		k = k-1
 	return [k, b]
 
-#@timer # Returns loaction in the reference sequence and the number of mismatches(not greater than 3)
-# given a location i in 1st column and a pattern
-# l = len(pattern), k = number of characters counted from the end that will surely match
-def match(pattern, i, l, k, seq_file, maps):
-	count, l1 = 0, l-k
-	i = maps[i]-l1
-	text = fetch(seq_file, i, l1, 6)
-	print(text)
-	for r in range(l1):
+#@timer # Returns number of mismatches given a location i in the reference sequence and a pattern
+# l = number of characters from the left that we want to match
+def match(pattern, i, l, seq_file, maps):
+	mismatch, text = 0, fetch(seq_file, i, l, 6)
+	# print(text)
+	for r in range(l):
 		if pattern[r] != text[r]:
-			count = count + 1
-			if count > 2:
-				break
-	return [i, count]
+			mismatch = mismatch + 1
+	return mismatch
 
-@timer # Searches for a pattern using bands and in the eSnd matches the pattern at 
-# locations suggested by band calculation 
+#@timer # Finds read in the sequence, returns best matching location and number of mismatches
 def search(pattern, col1, bwt, ranks, bands, seq_file, maps):
 	l, k, short = len(pattern), 8, False # k = number of matched characters from the right
 	b, nb = [0, 0], bands[base4(pattern[-8:])]
@@ -109,66 +103,29 @@ def search(pattern, col1, bwt, ranks, bands, seq_file, maps):
 		nb = next_band(b, pattern[l-k], col1, bwt, ranks)
 	if k != l and short != True:
 		k = k-1
-
-	for i in range(b[0], b[1]+1):
-		loc, count = match(pattern, i, l, k, seq_file, maps)
-		if count > 2:
-			print('Read doesn\'t match at {}'.format(loc))
-		else:
-			print('Read matches at {}'.format(loc))
-
-# Checks if a location is in reg/green zones, returns exon-number and gene-color
-def rg_check(loc):
-	for i, ex in enumerate(red_exons):
-		if ex[0] <= loc <= ex[1]:
-			return [i, 0]
-	for i, ex in enumerate(green_exons):
-		if ex[0] <= loc <= ex[1]:
-			return [i, 1]
-	return [-1, -1]
-
-#@timer # Rejects locations not in red/green zones
-def match_(pattern, i, l, k, seq_file):
-	count, l1 = 0, l-k
-	i = i-l1
-	ex, color = rg_check(i)
-	if color == -1:
-		return [-1, -1, -1, 3]
-	text = fetch(seq_file, i, l1, 6)
-	#print(text)
-	for r in range(l1):
-		if pattern[r] != text[r]:
-			count = count + 1
-			if count > 2:
-				break
-	return [ex, color, i, count]
-
-@timer # Finds the first location where the pattern matches taking reverse complement into account
-def search_(pattern, col1, bwt, ranks, bands, seq_file, maps):
-	l, k, short = len(pattern), 8, False # k = number of matched characters from the right
-	b, nb = [0, 0], bands[base4(pattern[-8:])]
-	while nb != b:
-		b = nb
-		if b[1]-b[0] < 5:
-			short = True
-			break
-		k = k+1
-		if k > l:
-			k = l
-			break
-		nb = next_band(b, pattern[l-k], col1, bwt, ranks)
-	if k != l and short != True:
-		k = k-1
-	locs = maps[b[0]: b[1]+1]
+	l, locs = l-k, []
+	for i in maps[b[0]:b[1]+1]:
+		if i >= l:
+			locs.append(i-l)
 	locs.sort()
-	print(locs)
-	res, min_mismatch = [], 4
+	min_mismatch, mmi, res = 4, -1, []
 	for j, i in enumerate(locs):
-		res.append(match_(pattern, i, l, k, seq_file))
-		print res[j]
-		if res[j][3] == 0:
-			return res[j]
-		if min_mismatch > res[j][3]:
-			min_mismatch = res[j][3]
-			k = j
-	return res[k]
+		res.append([i, match(pattern, i, l, seq_file, maps)])
+		#print(res[j])
+		if res[j][1] == 0:
+			return res[j]	
+		elif min_mismatch > res[j][1]:
+			min_mismatch = res[j][1]
+			mmi = j
+	return res[mmi]
+
+#@timer # search that takes reverse complements into account
+def search_(pattern, col1, bwt, ranks, bands, seq_file, maps):
+	loc, mismatch = search(pattern, col1, bwt, ranks, bands, seq_file, maps)
+	if mismatch != 0:
+		loc1, mismatch1 = search(rev_comp(pattern), col1, bwt, ranks, bands, seq_file, maps)
+		if mismatch < mismatch1:
+			return [loc, mismatch]
+		else:
+			return [loc1, mismatch1]
+	return [loc, mismatch]

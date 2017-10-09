@@ -1,5 +1,6 @@
-from init import *
+#from init import *
 from search import *
+from rank import *
 #from gene import *
 #from utility import *
 #from prepband import *
@@ -17,7 +18,7 @@ def verify(s = 'AGCGCT'):
 s = 'GAGGACAGCACCCAGTCCAGCATCTTCACCTACACCAACAGCAACTCCACCAGAGGTGAGCCAGCAGGCCCGTGGAGGCTGGGTGGCTGCACTGGGGGCCA'
 l = len(s)
 
-print search(s, col1, bwt, ranks, bands, seq_file, maps)
+#print search_(s, col1, bwt, ranks, bands, seq_file, maps)
 
 def verify_search(band, pattern, k):
 	i = band[0]
@@ -44,3 +45,5 @@ for b in green_exons:
 	red = list(map(float, lines[0].split()))
 	green = list(map(float, lines[1].split()))
 	print(red, green)"""
+
+prep_B_rank(open('./../data/chrX_last_col.txt', 'r'), 151100559)

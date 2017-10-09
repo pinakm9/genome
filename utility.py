@@ -10,7 +10,7 @@ def timer(func):
 		return val
 	return new_func
 
-@timer # Reads an appropriate file into a Python dictionary
+#@timer # Reads an appropriate file into a Python dictionary
 def file_2_dict(file):
 	d = {}
 	with open(file, 'r') as file: 
@@ -23,14 +23,17 @@ def file_2_dict(file):
 def load_file(file, offset):
 	return file.read()[offset:].replace('\n', '')
 
-@timer 
+#@timer # Creates integers out of a string-array 
 def load_int(text_arr):
 	return list(map(int, text_arr))
 
 #@timer # Fetches length l text from a file given a starting position
 def fetch(file, start, l, offset):
 	cor1, cor2 = start/100, (start+l)/100
-	file.seek(start + cor1 + offset)
+	try:
+		file.seek(start + cor1 + offset)
+	except:
+		print('Error encountered: {} {} {}'.format(start, l, cor1))
 	return file.read(cor2-cor1+l).replace('\n', '')
 
 #@timer # Converts each string to a natural number in one-to-one fashion
@@ -40,6 +43,7 @@ def base4(text):
 		num = num + d[c]*4**i
 	return num
 
+# Given a short string finds appropriate band using lookup
 @timer
 def band(text, file):
 	return list(map(int, file[base4(text)].split()))
@@ -50,3 +54,10 @@ def rev_comp(text):
 	for c in text[::-1]:
 		s = s + d[c]
 	return s
+
+# Calculates length of every read
+@timer
+def calc_len(p2_in, p2_out):
+	with open(p2_in, 'r') as lines, open(p2_out, 'w+') as file:
+		for line in lines:
+			file.write('{}\n'.format(len(line)-1))

@@ -18,13 +18,14 @@ def rank_file(char):
 	return 'program_data/' + char + '_B_rank' + '100' + '.txt'
 
 @timer # Computes B-ranks at milestones (distance between consecutive milestones = 100)
-def prep_B_rank(bwt_file): 
+def prep_B_rank(bwt_file, ref_len): 
 	rank, files = {}, []
 	for char in 'ACGT':
 		files.append(open(rank_file(char), 'w+'))
 		files[len(files)-1].write('0\n')
 	for char in 'ACGT$':	
 		rank[char] = 0
+	bwt_file.seek(0)
 	for mile in range(ref_len/100): 
 		for char in bwt_file.read(100):
 			rank[char] = rank[char] + 1
@@ -58,7 +59,7 @@ def load_rank():
 	d = {}
 	for char in 'ACGT':
 		with open(rank_file(char), 'r') as file:
-			d[char] = list(map(int, file.read().split()))
+			d[char] = load_int(file.read().split())
 	return d
 
 # Computes index of char in the first column given rank
